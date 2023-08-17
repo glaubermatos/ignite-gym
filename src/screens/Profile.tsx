@@ -9,6 +9,8 @@ import { yupResolver } from '@hookform/resolvers/yup'
 import * as ImagePicker from "expo-image-picker"
 import * as FileSystem from "expo-file-system"
 
+import defaultUserPhotoImg from "@assets/userPhotoDefault.png"
+
 import { Input } from "@components/Input";
 import { Button } from "@components/Button";
 import { UserPhoto } from "@components/UserPhoto";
@@ -57,7 +59,6 @@ const profileSchema = yup.object({
 export function Profile() {
   const [isUpdating, setIsUpdating] = useState(false)
   const [photoIsLoading, setPhotoIsLoading] = useState(false)
-  const [userPhoto, setUserPhoto] = useState("https://github.com/glaubermatos.png")
 
   const { user, updateUserProfile } = useAuth()
   const toast = useToast()
@@ -127,7 +128,39 @@ export function Profile() {
           })
         }
 
-        setUserPhoto(photoSelected.assets[0].uri)
+        //obtem a estenção da imagem
+        const fileExtension = photoSelected.assets[0].uri.split('.').pop();
+
+        //cria um objeto que o backend espera
+        const photoFile = {
+          name: `${user.name}.${fileExtension}`.toLowerCase(),
+          uri: photoSelected.assets[0].uri,
+          type: `${photoSelected.assets[0].type}/${fileExtension}`
+        } as any
+
+        //formuário para envio da foto, o backend espera a foto pelo parametro avatar
+        const userPhotoUploadForm = new FormData();
+        userPhotoUploadForm.append('avatar', photoFile)
+
+        const avatarUpdatedResponse = await api.patch('/users/avatar', userPhotoUploadForm, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        })
+
+        const userUpdated = user
+        userUpdated.avatar = avatarUpdatedResponse.data.avatar
+        await updateUserProfile(userUpdated)
+
+        toast.show({
+          title: 'Foto atualizada!',
+          placement: 'top',
+          bgColor: 'green.500'
+        })
+
+        console.log(photoFile)
+
+        // setUserPhoto(photoSelected.assets[0].uri)
       }
 
     } catch (error) {
@@ -155,7 +188,10 @@ export function Profile() {
                 />
               :
                 <UserPhoto
-                  source={{uri: userPhoto}}
+                source={
+                  user.avatar 
+                  ? {uri: `${api.defaults.baseURL}/avatar/${user.avatar}`}
+                  : defaultUserPhotoImg}
                   alt="Foto do usuário"
                   size={PHOTO_SIZE}
                 />
