@@ -104,7 +104,7 @@ export function SignIn() {
                     placeholder="Senha"
                     secureTextEntry
                     onChangeText={onChange}
-                    errorMessage={errors.email?.message}
+                    errorMessage={errors.password?.message}
                   />
                 )}
               />
